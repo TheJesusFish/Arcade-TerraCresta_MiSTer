@@ -1,0 +1,17 @@
+set_global_assignment -name SDC_FILE Arcade-TerraCresta.sdc
+set_global_assignment -name SYSTEMVERILOG_FILE Arcade-TerraCresta.sv
+set_global_assignment -name QIP_FILE rtl/modules/fx68k/fx68k.qip
+set_global_assignment -name QIP_FILE rtl/modules/T80/T80.qip
+set_global_assignment -name QIP_FILE rtl/modules/jtopl/target/quartus/jt26.qip
+set_global_assignment -name QIP_FILE sys/pll_q17.qip
+set_global_assignment -name QIP_FILE sys/pll_hdmi.qip
+set_global_assignment -name QIP_FILE sys/pll_cfg.qip
+set_global_assignment -name QIP_FILE sys/pll_audio.qip
+set_global_assignment -name CDF_FILE jtag.cdf
+set_global_assignment -name QIP_FILE sys/sys.qip
+
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/video_timing.sv
+set_global_assignment -name VHDL_FILE rtl/mem/math.vhd
+set_global_assignment -name VERILOG_FILE rtl/chip_select.v
+set_global_assignment -name VERILOG_FILE rtl/pause.v
+set_global_assignment -name VHDL_FILE rtl/mem/dual_port_ram.vhd
