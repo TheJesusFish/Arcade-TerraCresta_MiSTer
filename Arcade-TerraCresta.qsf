@@ -74,4 +74,9 @@ source sys/sys_analog.tcl
 source files.qip
 set_global_assignment -name ENABLE_SIGNALTAP OFF
 
+# The trimmed sys/pll_cfg/pll_cfg_hdmi.v only reprograms physical counter C5.
+# Keep HDMI outclk[0] on C5 or HDMI runs at the wrong rate (Template_MiSTer #112).
+# Confirm the Output Clock Location in the fit report's PLL Usage Summary.
+set_location_assignment PLLOUTPUTCOUNTER_X0_Y5_N1 -to "pll_hdmi:pll_hdmi|pll_hdmi_0002:pll_hdmi_inst|altera_pll:altera_pll_i|altera_cyclonev_pll:cyclonev_pll|counter[0].output_counter"
+
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

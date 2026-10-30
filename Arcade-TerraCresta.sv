@@ -455,8 +455,11 @@ reg   [7:0] spi, spi_r;
 reg         spr_transp, spr_transp_r;
 
 
-wire  [9:0] hc_s = flip ? ({2'b0, ~hc[7:0]} + scroll_x[9:0] + 10'd256) : ({2'b0, hc[7:0]} + scroll_x[9:0]);
-wire  [8:0] vc_s = flip ? ({1'b0, ~vc[7:0]} + scroll_y[8:0] + 9'd256) : ({1'b0, vc[7:0]} + scroll_y[8:0]);
+// Flipped tilemap position is (255 - pos) + scroll, as in MAME. No +256: the
+// original "~hc[7:0] + scroll_x + 9'd256" widened hc before inverting, so the
+// set upper bits plus 256 wrapped to zero.
+wire  [9:0] hc_s = {2'b0, hc[7:0] ^ {8{flip}}} + scroll_x[9:0];
+wire  [8:0] vc_s = {1'b0, vc[7:0] ^ {8{flip}}} + scroll_y[8:0];
 
 wire  [8:0] hc_x = {hc[8], hc[7:0] ^ {8{flip}}};
 wire  [8:0] vc_x = vc ^ {9{flip}};
@@ -1453,12 +1456,13 @@ module delay
     output o
 );
 
-reg [3:0] r;
+// Include the registered clk_6M phase so blanking matches the RGB pipeline.
+reg [4:0] r;
 
-assign o = r[3]; 
+assign o = r[4];
 
 always @(posedge clk) begin
-    r <= { r[2:0], i };
+    r <= { r[3:0], i };
 end
 
 endmodule
