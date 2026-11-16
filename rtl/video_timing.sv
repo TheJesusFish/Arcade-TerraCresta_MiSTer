@@ -36,6 +36,16 @@ reg [8:0] h;
 assign vc = v;
 assign hc = h;
 
+// sync edges moved by the sign-extended OSD offsets
+wire [8:0] hs_adj   = {{5{hs_offset[3]}}, hs_offset};
+wire [8:0] vs_adj   = {{5{vs_offset[3]}}, vs_offset};
+wire [8:0] hs_start = HS_START + hs_adj;
+wire [8:0] hs_end   = HS_END + hs_adj;
+wire [8:0] vs_start = VS_START + vs_adj;
+wire [8:0] vs_end_n = VS_END + vs_adj;
+// a v-sync pulse that runs past the last line ends in the next frame
+wire [8:0] vs_end   = (vs_end_n >= VTOTAL) ? vs_end_n - VTOTAL : vs_end_n;
+
 always @ (posedge clk) begin
 	if (reset) begin
 		h <= 0;
@@ -75,15 +85,15 @@ always @ (posedge clk) begin
         end
     end
    
-    if ( v == (VS_START + $signed(vs_offset) ) ) begin
+    if ( v == vs_start ) begin
         vsync <= 1;
-    end else if ( v == (VS_END + $signed(vs_offset) ) ) begin
+    end else if ( v == vs_end ) begin
         vsync <= 0;
     end
 
-    if ( h == (HS_START + $signed(hs_offset) ) ) begin
+    if ( h == hs_start ) begin
         hsync <= 1;
-    end else if ( h == (HS_END + $signed(hs_offset) ) ) begin
+    end else if ( h == hs_end ) begin
         hsync <= 0;
     end
 

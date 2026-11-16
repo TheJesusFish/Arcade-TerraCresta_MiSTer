@@ -75,7 +75,9 @@ assign VIDEO_ARY = (!aspect_ratio) ? (orientation  ? 8'd3 : 8'd4) : 12'd0;
 `include "build_id.v" 
 
 // save-state register chunk: board registers, OPL select, z80 irq, 68000 irq
-localparam MISC_BITS = 97 + 8 + 2;
+localparam MISC_USED = 97 + 8 + 2;
+// padded to whole 16-bit save-state words
+localparam MISC_BITS = 112;
 
 localparam CONF_STR = {
     "TerraCrestaMD;SS3E000000:400000;",
@@ -483,6 +485,7 @@ delay delay_vbl( .clk(clk_sys), .ce(ce_6m), .i( vbl ), .o(vbl_delay) ) ;
 video_timing video_timing (
     .clk(clk_sys),
     .clk_pix(clk_6M),
+    .reset(RESET),
     .hc(hc),
     .vc(vc),
     .hs_offset(hs_offset),
@@ -1238,7 +1241,7 @@ always @ (posedge clk_sys) begin
     end
 
    if ( ss_misc_wr ) begin
-        { scroll_x, scroll_y, cocktail_flip, sound_latch, dac1, dac2, prot_cmd, nb1412m2_addr, nb1412m2_rom_dout, nb1412m2_adj_dout } <= ss_misc_out[MISC_BITS-1:10];
+        { scroll_x, scroll_y, cocktail_flip, sound_latch, dac1, dac2, prot_cmd, nb1412m2_addr, nb1412m2_rom_dout, nb1412m2_adj_dout } <= ss_misc_out[MISC_USED-1:10];
    end
 
    if ( reset == 1 ) begin
@@ -1849,7 +1852,7 @@ wire  [7:0] ss_z80_wdata;
 wire [211:0] z80_reg, z80_dir;
 wire [MISC_BITS-1:0] ss_misc_out;
 wire        ss_misc_wr;
-wire [MISC_BITS-1:0] ss_misc_in = { scroll_x, scroll_y, cocktail_flip, sound_latch, dac1, dac2, prot_cmd, nb1412m2_addr, nb1412m2_rom_dout, nb1412m2_adj_dout, opl_sel, z80_irq_n, m68k_ipl2_n };
+wire [MISC_BITS-1:0] ss_misc_in = { {(MISC_BITS-MISC_USED){1'b0}}, scroll_x, scroll_y, cocktail_flip, sound_latch, dac1, dac2, prot_cmd, nb1412m2_addr, nb1412m2_rom_dout, nb1412m2_adj_dout, opl_sel, z80_irq_n, m68k_ipl2_n };
 
 ssbus_if ssbus();
 ssbus_if ssb[SSIDX_COUNT]();
