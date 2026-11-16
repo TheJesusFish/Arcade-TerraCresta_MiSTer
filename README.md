@@ -1,7 +1,7 @@
 
-# Nichibutsu M68000 (Terra Cresta) FPGA Implementation — MD version
+# Nichibutsu M68000 (Terra Cresta) FPGA Implementation
 
-FPGA compatible core of Nichibutsu M68000 (Terra Cresta Based) arcade hardware for [**MiSTerFPGA**](https://github.com/MiSTer-devel/Main_MiSTer/wiki) written by [**Erin Olafson**].  Terra Cresta YM2203 OPN Type PCB donated by [**@atrac17**](https://twitter.com/_atrac17) / [**@djhardrich**](https://twitter.com/djhardrich). 
+FPGA compatible core of Nichibutsu M68000 (Terra Cresta Based) arcade hardware for [**MiSTerFPGA**](https://github.com/MiSTer-devel/Main_MiSTer/wiki) written by [**Erin Olafson**].  Terra Cresta YM2203 OPN Type PCB donated by [**@atrac17**](https://twitter.com/_atrac17) / [**@djhardrich**](https://twitter.com/djhardrich). Maintenance and miscellaneous quality of life features added by TheJesusfish.
 
 The goal for this implementation is gameplay to be 1:1 of the Nichibutsu (Terra Cresta based) 68000 hardware. This core was developed with assistance from [**atrac17**](https://github.com/atrac17).
 
@@ -47,13 +47,10 @@ Button combinations: none in normal play. Kid no Hore Hore Daisakusen **Debug Mo
 | Reset | F3 | Pause | P |
 | Layer toggles (FG / BG / sprites) | F7 / F8 / F9 | Restore / save state (slot 1) | F1 / Alt+F1 |
 
-## MD features
+## Core Features
 
 - **Save states**: hold **L** on controller 1, then **Down** saves, **Up** restores, **Left/Right** changes the slot (4 slots). Also in the OSD (slot, autoincrement, save/restore) and F1 / Alt+F1. States are written to `savestates/` by Main.
 - **High scores**: the high-score table (MAME `hiscore.dat` entries) is saved to `config/nvram/<game>.nvm` when the OSD is opened (OSD "Autosave Hiscores", default On) or with OSD "Save Hiscores", and restored after the game has initialised its table.
-- **DIP switches**: changing a DIP in the OSD does not reset the game; it applies at **"Reset to apply"** (or OSD Reset / F3).
-- **Pause** (R / P / OSD option) stops both CPUs and the sound.
-- **Video**: vertical by default (OSD "Orientation": Vert / Horz). The game's flip screen (Flip Screen DIP, cocktail player 2) is drawn by the core and works on analog and HDMI.
 
 ## External Modules
 
