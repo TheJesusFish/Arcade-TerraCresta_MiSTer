@@ -1,51 +1,76 @@
 
-# Nichibutsu M68000 (Terra Cresta) FPGA Implementation
+# Nichibutsu M68000 (Terra Cresta) FPGA Implementation — MD version
 
 FPGA compatible core of Nichibutsu M68000 (Terra Cresta Based) arcade hardware for [**MiSTerFPGA**](https://github.com/MiSTer-devel/Main_MiSTer/wiki) written by [**Erin Olafson**].  Terra Cresta YM2203 OPN Type PCB donated by [**@atrac17**](https://twitter.com/_atrac17) / [**@djhardrich**](https://twitter.com/djhardrich). 
 
 The goal for this implementation is gameplay to be 1:1 of the Nichibutsu (Terra Cresta based) 68000 hardware. This core was developed with assistance from [**atrac17**](https://github.com/atrac17).
 
+The **MD** version (RBF `Arcade-TerraCrestaMD_YYYYMMDD.rbf`, MRAs `... [MD].mra`, `<rbf>TerraCrestaMD</rbf>`) adds save states, high-score saving, per-controller start/coin, MAME 0.288 DIP switches, a current MiSTer framework and fully clock-enabled timing. It is based on the original core by va7deo ([va7deo/TerraCresta](https://github.com/va7deo/TerraCresta)).
+
 ![Nichibutsu TC](https://user-images.githubusercontent.com/32810066/172844714-a23fce6b-2eab-4c47-ae46-e0c48f447c84.png)
 
 ## Supported Games
 
-| Title | Status | Released | Protection | Protected Sets |
-|------|---------|----------|------------|----------------|
-[**Terra Cresta**](https://en.wikipedia.org/wiki/Terra_Cresta)                | Implemented | **Y** | None     | N/A                    |
-[**Sei Senshi Amatelass**](https://en.wikipedia.org/wiki/Nihon_Bussan)        | Implemented | **Y** | NB1412M2 | **amatelass, amazon**  |
-[**Kid no Hore Hore Daisakusen**](https://en.wikipedia.org/wiki/Nihon_Bussan) | Implemented | **Y** | NB1412M2 | **horekid**            |
+| Title | MAME set | MRA | Protection |
+|-------|----------|-----|------------|
+| [**Terra Cresta**](https://en.wikipedia.org/wiki/Terra_Cresta) (YM3526 set 1) | terracre | `releases/` | None |
+| Terra Cresta (YM3526 set 2 / set 3) | terracreo, terracrea | `_alternatives/_Terra Cresta/` | None |
+| [**Soldier Girl Amazon**](https://en.wikipedia.org/wiki/Soldier_Girl_Amazon) | amazon | `releases/` | NB1412M2 |
+| Soldier Girl Amazon (Tecfri license), Sei Senshi Amatelass | amazont, amatelas | `_alternatives/_Soldier Girl Amazon/` | NB1412M2 |
+| **Kid no Hore Hore Daisakusen** | horekid | `releases/` | NB1412M2 |
+| Kid no Hore Hore Daisakusen (bootleg set 1 / set 2), Booby Kids | horekidb, horekidb2, boobhack | `_alternatives/_Kid no Hore Hore Daisakusen/` | None |
+
+MRAs follow MAME 0.288 (ROMs, DIP switches with MAME's options, order and defaults, high-score tables).
+Not supported: **Terra Cresta (YM2203)** (`terracren`) — it uses a YM2203 sound board; this core has the YM3526 only.
+
+## Controls
+
+Default MiSTer mapping (every MRA): **Button 1 → A, Button 2 → B, Start → Start, Coin → Select, Pause → R, Save/Load → L**.
+Each controller drives its own player: controller 1 Start/Coin = 1P Start / Coin 1, controller 2 Start/Coin = 2P Start / Coin 2, and all player 2 controls come from controller 2. With the default **Upright** cabinet the games alternate players on the player 1 controls, as on the PCB; set **Cabinet = Cocktail** to play player 2 on controller 2 (the screen flips for player 2's turns).
+
+| Game | Joystick | Button 1 | Button 2 | Source of the names |
+|------|----------|----------|----------|---------------------|
+| Terra Cresta | 8-way | Cannon Beam | Formation | Instruction art in `doc/` (キャノンビーム / フォーメーション) |
+| Soldier Girl Amazon | 8-way | Sword Beam | Stop Bullet | Original va7deo MRAs; Japanese instruction card (ソードビーム / ストップ弾) |
+| Kid no Hore Hore Daisakusen | 4-way | Dig/Bury | Open/Close Door | Original va7deo MRAs |
+
+Button combinations: none in normal play. Kid no Hore Hore Daisakusen **Debug Mode** DIP (Cabinet = Upright): insert a coin and press P2 Button 1 + Button 2 for level select (P1 Button 1 / Button 2 change the level, P1 Start starts); P2 Button 1 + Button 2 + P1 Start gives invulnerability and infinite time. Soldier Girl Amazon **Debug Mode** DIP: invulnerability, hold 2P Start to fast forward (also OSD "Turbo (Amazon Sets)").
+
+### Keyboard
+
+| Function | Key | Function | Key |
+|---|---|---|---|
+| P1 Start / P2 Start | 1 / 2 | P1 Coin / P2 Coin | 5 / 6 |
+| P1 Up/Down/Left/Right | Cursor keys | P1 Button 1 / 2 | L-Ctrl / L-Alt |
+| P2 Up/Down/Left/Right | R / F / D / G | P2 Button 1 / 2 | A / S |
+| Service | 9 | Test (service mode) | F2 |
+| Reset | F3 | Pause | P |
+| Layer toggles (FG / BG / sprites) | F7 / F8 / F9 | Restore / save state (slot 1) | F1 / Alt+F1 |
+
+## MD features
+
+- **Save states**: hold **L** on controller 1, then **Down** saves, **Up** restores, **Left/Right** changes the slot (4 slots). Also in the OSD (slot, autoincrement, save/restore) and F1 / Alt+F1. States are written to `savestates/` by Main.
+- **High scores**: the high-score table (MAME `hiscore.dat` entries) is saved to `config/nvram/<game>.nvm` when the OSD is opened (OSD "Autosave Hiscores", default On) or with OSD "Save Hiscores", and restored after the game has initialised its table.
+- **DIP switches**: changing a DIP in the OSD does not reset the game; it applies at **"Reset to apply"** (or OSD Reset / F3).
+- **Pause** (R / P / OSD option) stops both CPUs and the sound.
+- **Video**: vertical by default (OSD "Orientation": Vert / Horz). The game's flip screen (Flip Screen DIP, cocktail player 2) is drawn by the core and works on analog and HDMI.
 
 ## External Modules
 
-|Name| Purpose | Author |
-|----|---------|--------|
-| [**fx68k**](https://github.com/ijor/fx68k)    | [**Motorola 68000 CPU**](https://en.wikipedia.org/wiki/Motorola_68000) | Jorge Cwik     |
-| [**t80**](https://opencores.org/projects/t80) | [**Zilog Z80 CPU**](https://en.wikipedia.org/wiki/Zilog_Z80)           | Daniel Wallner |
-| [**jtopl**](https://github.com/jotego/jtopl)  | [**Yamaha OPL**](https://en.wikipedia.org/wiki/Yamaha_OPL#OPL)         | Jose Tejada    |
-
-# Known Issues
-
-- ~~Clock domains need to be verified~~  
-- ~~H/V clock timing for CRT need to be verified~~  
-- ~~Palette issue (wrong colors, stray green/tan lines)~~  
-- ~~Sprite flip on boss (right arm)~~  
-- ~~Dot Crawl on Y/C video output~~  
-- ~~Map Test / Service to keyboard handler~~  
-- ~~Service Menu (push button service menu) in Kid no Hore Hore Daisakusen~~  
-- ~~Additional debugging features (layer toggle)~~  
-- ~~Protection IC **NB1412M2** implementation~~  
-- ~~Input swap on amatelass, amazon, horekidb~~  
-- ~~Sprite / Tile offsets in Kid no Hore Hore Daisakusen (screen transitions)~~  
-- ~~Screen Flip implementation~~  
-- ~~Sprite Clipping~~
-
-# Remaining Tasks
-
-- **Reverse engineer Terra Cresta and provide schematics**  
+| Name | Purpose | Author | Source |
+|------|---------|--------|--------|
+| [**fx68k**](https://github.com/ijor/fx68k) | Motorola 68000 CPU | Jorge Cwik | ijor/fx68k @ `0602ee4627b10f301298f2673d826cdd6baa9327` |
+| [**T80**](https://github.com/MiSTer-devel/NeoGeo_MiSTer/tree/90a8350c4e7fafb64067cf777b58a93bc7511fdc/rtl/cpu/T80) | Zilog Z80 CPU | Daniel Wallner, Sorgelig, MiSTer-devel | MiSTer-devel/NeoGeo_MiSTer @ `90a8350c4e7fafb64067cf777b58a93bc7511fdc` (`rtl/cpu/T80`) |
+| [**jtopl**](https://github.com/jotego/jtopl) | Yamaha YM3526 (OPL) | Jose Tejada | jotego/jtopl @ `f96ff3ef16311e677b8bccc429b1b8f9a4e53276` |
+| [**Pause_MiSTer**](https://github.com/JimmyStones/Pause_MiSTer) | Pause / dim | Jim Gregory | as modified in va7deo/TerraCresta |
+| dual_port_ram / math | Block RAM wrapper | Josh Bassett (nullobject), MIT | via va7deo/TerraCresta |
+| [**Save states**](https://github.com/MiSTer-devel/Arcade-TaitoF2_MiSTer) | `ddram`, `memory_stream`, `savestates`, `savestate_ui` and the 68000 save/restore technique | Martin Donlon (wickerwaka); savestate_ui from FPGAzumSpass's MiSTer cores | MiSTer-devel/Arcade-TaitoF2_MiSTer @ `9438df98f1ea826c5398db43587992def0124603` |
+| High-score saving | Flow modelled on MiSTer-devel/Arcade-RaizingMD_MiSTer and Arcade-IGSPGM_MiSTer; table data from MAME `hiscore.dat` | MAME hiscore.dat contributors | MAME 0.288 |
+| [**Template_MiSTer**](https://github.com/MiSTer-devel/Template_MiSTer) | MiSTer framework (`sys/`) | MiSTer-devel | `e901a9fa6548f4eb024619357b89d48be94fd9f8` |
 
 # PCB Check List
 
-FPGA implementation is based on Terra Cresta and will be verified against the YM2203 PSG Type PCB with a YM3526 swap. Reverse engineering of an authentic Terra Cresta PCB will be done by [**Erin Olafson**]; schematics will be included in the repository.
+FPGA implementation is based on Terra Cresta and was verified against the YM2203 PSG Type PCB with a YM3526 swap.
 
 ### Clock Information
 
@@ -80,66 +105,9 @@ I C (Top Board)     | [**Motorola 68000 CPU**](https://en.wikipedia.org/wiki/Mot
 
 | Location | Chip | Use | PCB | ROM set |
 |----------|-----|------|-----|---------|
-15 G (Top Board) | [**NB1412M42**](https://raw.githubusercontent.com/va7deo/TerraCresta/main/doc/Sei%20Senshi%20Amatelass/Sei%20Senshi%20Amatelass%20Front.jpg) | Protection IC | <u>**Sei Senshi Amatelass <br><br> Kid no Hore Hore Daisakusen**</u> | amatelass, amazon, amazont <br><br> horekid |
+15 G (Top Board) | [**NB1412M2**](https://raw.githubusercontent.com/va7deo/TerraCresta/main/doc/Sei%20Senshi%20Amatelass/Sei%20Senshi%20Amatelass%20Front.jpg) | Protection IC | <u>**Sei Senshi Amatelass <br><br> Kid no Hore Hore Daisakusen**</u> | amatelas, amazon, amazont <br><br> horekid |
 
-# PCB Features
+# Debug Features
 
-|<p align="center">Game Debugging|
-|:---:|
-|<table><tr><th>Sei Senshi Amatelass</th><th>Debugging Features [amatelass, amazon, amazont]</th></tr><tr><td><img src="https://user-images.githubusercontent.com/32810066/173086562-300b4bfa-00fd-4170-a44a-5b5f661f3165.png"></img></td><td><p align="left">Dip switch 7 on bank 1 enables **invincibility**. When enabled, overclocking the framerate<br> is possible by holding the 2P Start Bttn or enabling **turbo** in the OSD.</p></td></table>
-|<table><tr><th>Kid no Hore<br>Hore Daisakusen</th><th>Debugging Features [horekid, horekidb1, horekidb2]</th></tr><tr><td><img src="https://user-images.githubusercontent.com/32810066/173086616-6416caad-40b0-43fd-9405-39276c3f06bc.png"></img></td><td><p align="left">**Debug Mode** and cabinet **Upright** dip switches are set to default. When enabled,<br> you will be able to access the following debug features:<br><br>**Level Selection**: insert a coin and press P2 Bttn 1 and 2. In the bottom right corner,<br>00 will be displayed. Pressing P2 Bttn 1 and 2 and P1 1 Bttn 1 increases the level. <br>Pressing P2 Bttn 1 and 2 and P1 Bttn 2 decreases the level. Press P1 start after <br>choosing your level selection.<br><br>**Invincibility** and **Infinite Time** are set by inserting a coin and pressing P2 Bttn 1, <br>P2 Bttn 2 and P1 Start Bttn.<br><br>To enable the debug level select, set your level prior to enabling these debug features.</p></td></table>
-
-<br>
-
-### GFX Layer Toggle
-
--  The three graphical layers can be toggled in the OSD under the Debug options or by pressing<br> F7-F9 on the keyboard.
-
-<br>
-
-|Layer Debug|
-|:--:|
-|<table> <tr> <th>All Layers</th><th>Foreground</th><th>Background</th><th>Sprites</th></tr><tr><td><p align="center"><img width="144" height="192" src="https://user-images.githubusercontent.com/32810066/166094033-c585ac95-f2fc-4505-8c53-28bf46848ff3.png"></p></td><td> <p align="center"><img width="144" height="192" src="https://user-images.githubusercontent.com/32810066/166094056-9a9506c7-65d0-4785-ab2c-df03b28f154d.png"></p></td><td> <p align="center"><img width="144" height="192" src="https://user-images.githubusercontent.com/32810066/166094260-69225a34-8b57-4746-bd8c-22f4f09f3a13.png"></td><td> <p align="center"><img width="144" height="192" src="https://user-images.githubusercontent.com/32810066/166094263-421faaf9-5f14-4ea0-8b82-408e708f7837.png"></td></tr>
- </table>
-
-### Sprite Flip on Axis Toggle
-
--  To enable sprite flip, in the OSD under the Debug options enable<br> the toggle.
-
-<br>
-
-|Sprite Flip|
-|:--:|
-|<table> <tr> <th>All Layers</th><th> Sprite Flip X-Axis</th><th>Sprite Flip Y-Axis</th></tr><tr><td><p align="center"><img width="144" height="192" src="https://user-images.githubusercontent.com/32810066/166094328-947de08c-986f-48de-a35a-a6eeb40bbb1c.png"></p></td><td> <p align="center"><img width="144" height="192" src="https://user-images.githubusercontent.com/32810066/166094329-2b916aeb-73c4-46bf-b1f6-4a9f7ca5a829.png"></p></td><td> <p align="center"><img width="144" height="192" src="https://user-images.githubusercontent.com/32810066/166094330-1fd8d1f9-e420-4acb-ad81-f33fcb4bb3d8.png"></td>
- </table>
-
-# Control Layout
-
-Game | Joystick | Service Menu | Shared Controls | Dip Default |
---- | :---: | :---: | :---: | :---: |
-Terra Cresta| 8-Way | <img src="https://user-images.githubusercontent.com/32810066/172837828-56bb974b-867d-4308-be11-ab7a69c711e7.png"></p> | Upright | **Table** |
-Sei Senshi Amatelass| 8-Way | <img src="https://user-images.githubusercontent.com/32810066/172837832-cb00f44c-3b44-410a-a5c5-807688508c3f.png"></p> | Upright | **Table** |
-Kid no Hore Hore Daisakusen| 4-Way | <img src="https://user-images.githubusercontent.com/32810066/172837833-3a7b3d2e-64d2-4860-9e22-3be11b4ecfe9.png"></p> | No | **Upright** |
-
-<br>
-
-- Upright cabinet shares a 1L2B control panel layout. Players are required to switch controller. The default cabinet style is set to table for Terra Cresta and Sei Senshi Amatelass. This enables multiple player controllers.
-
-### Keyboard Handler
-
-- Keyboard inputs mapped to mame defaults for all functions with additional keys for layer toggles.
-
-<br>
-
-|Services|Coin/Start|
-|--|--|
-|<table> <tr><th>Functions</th><th>Keymap</th></tr><tr><td>Test</td><td>F2</td></tr><tr><td>Reset</td><td>F3</td></tr><tr><td>Service</td><td>9</td></tr><tr><td>Pause</td><td>P</td></tr> </table> | <table><tr><th>Functions</th><th>Keymap</th><tr><tr><td>P1 Start</td><td>1</td></tr><tr><td>P2 Start</td><td>2</td></tr><tr><td>P1 Coin</td><td>5</td></tr><tr><td>P2 Coin</td><td>6</td></tr> </table>|
-
-|Player 1|Player 2|
-|--|--|
-|<table> <tr><th>Functions</th><th>Keymap</th></tr><tr><td>P1 Up</td><td>Up</td></tr><tr><td>P1 Down</td><td>Down</td></tr><tr><td>P1 Left</td><td>Left</td></tr><tr><td>P1 Right</td><td>Right</td></tr><tr><td>P1 Bttn 1</td><td>L-Ctrl</td></tr><tr><td>P1 Bttn 2</td><td>L-Alt</td></tr> </table> | <table> <tr><th>Functions</th><th>Keymap</th></tr><tr><td>P2 Up</td><td>R</td></tr><tr><td>P2 Down</td><td>F</td></tr><tr><td>P2 Left</td><td>D</td></tr><tr><td>P2 Right</td><td>G</td></tr><tr><td>P2 Bttn 1</td><td>A</td></tr><tr><td>P2 Bttn 2</td><td>S</td></tr> </table>|
-
-|Debug|
-|--|
-|<table> <tr><th>Functions</th><th>Keymap</th></tr><tr><td>Layer (FG)</td><td>F7</td></tr><tr><td>Layer (BG)</td><td>F8</td></tr><tr><td>Layer (SP)</td><td>F9</td></tr> </table> |
-
+- The three graphics layers can be toggled in the OSD (PCB & Debug Settings) or with F7-F9.
+- Sprite flip on the X / Y axis can be inverted in the OSD (PCB & Debug Settings).

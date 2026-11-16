@@ -1,17 +1,31 @@
-set_global_assignment -name SDC_FILE Arcade-TerraCresta.sdc
-set_global_assignment -name SYSTEMVERILOG_FILE Arcade-TerraCresta.sv
-set_global_assignment -name QIP_FILE rtl/modules/fx68k/fx68k.qip
-set_global_assignment -name QIP_FILE rtl/modules/T80/T80.qip
+# fx68k: ijor/fx68k @ 0602ee4627b10f301298f2673d826cdd6baa9327 (Jorge Cwik, GPL-3.0)
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/modules/fx68k/fx68k.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/modules/fx68k/fx68kAlu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/modules/fx68k/uaddrPla.sv
+# T80: MiSTer-devel/NeoGeo_MiSTer @ 90a8350c4e7fafb64067cf777b58a93bc7511fdc rtl/cpu/T80 (Daniel Wallner, Sorgelig et al., T80 license)
+set_global_assignment -name VHDL_FILE rtl/modules/T80/T80_Pack.vhd
+set_global_assignment -name VHDL_FILE rtl/modules/T80/T80_ALU.vhd
+set_global_assignment -name VHDL_FILE rtl/modules/T80/T80_Reg.vhd
+set_global_assignment -name VHDL_FILE rtl/modules/T80/T80_MCode.vhd
+set_global_assignment -name VHDL_FILE rtl/modules/T80/T80.vhd
+set_global_assignment -name VHDL_FILE rtl/modules/T80/T80pa.vhd
+# jtopl (YM3526): jotego/jtopl @ f96ff3ef16311e677b8bccc429b1b8f9a4e53276 (Jose Tejada, GPL-3.0)
 set_global_assignment -name QIP_FILE rtl/modules/jtopl/target/quartus/jt26.qip
-set_global_assignment -name QIP_FILE sys/pll_q17.qip
-set_global_assignment -name QIP_FILE sys/pll_hdmi.qip
-set_global_assignment -name QIP_FILE sys/pll_cfg.qip
-set_global_assignment -name QIP_FILE sys/pll_audio.qip
-set_global_assignment -name CDF_FILE jtag.cdf
-set_global_assignment -name QIP_FILE sys/sys.qip
-
-set_global_assignment -name SYSTEMVERILOG_FILE rtl/video_timing.sv
-set_global_assignment -name VHDL_FILE rtl/mem/math.vhd
-set_global_assignment -name VERILOG_FILE rtl/chip_select.v
+# pause: Jim Gregory's Pause_MiSTer (GPL-3.0) as modified in va7deo/TerraCresta
 set_global_assignment -name VERILOG_FILE rtl/pause.v
+# dual_port_ram, math: Josh Bassett (nullobject), MIT, word-count change by va7deo
+set_global_assignment -name VHDL_FILE rtl/mem/math.vhd
 set_global_assignment -name VHDL_FILE rtl/mem/dual_port_ram.vhd
+# save states: ddram, memory_stream, savestates, savestate_ui from MiSTer-devel/Arcade-TaitoF2_MiSTer @ 9438df98f1ea826c5398db43587992def0124603 (Martin Donlon, GPL-2.0)
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/savestate/system_consts.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/savestate/ddram.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/savestate/memory_stream.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/savestate/savestates.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/savestate/savestate_ui.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/savestate/ss_adaptors.sv
+# core
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/hiscore.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/video_timing.sv
+set_global_assignment -name VERILOG_FILE rtl/chip_select.v
+set_global_assignment -name SDC_FILE Arcade-TerraCrestaMD.sdc
+set_global_assignment -name SYSTEMVERILOG_FILE Arcade-TerraCrestaMD.sv

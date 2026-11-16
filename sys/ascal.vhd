@@ -187,7 +187,6 @@ ENTITY ascal IS
 		------------------------------------
 		-- Low lag PLL tuning
 		o_lltune : OUT unsigned(15 DOWNTO 0);
-		o_fx_field : OUT std_logic;
 
 		------------------------------------
 		-- Input video parameters
@@ -206,7 +205,6 @@ ENTITY ascal IS
 		freeze    : IN std_logic :='0'; -- 1=Disable framebuffer writes
 		mode      : IN unsigned(4 DOWNTO 0);
  		bob_deint : IN std_logic := '0';
-		fx_direct : IN std_logic := '0';
 		-- SYNC  |_________________________/"""""""""\_______|
 		-- DE    |""""""""""""""""""\________________________|
 		-- RGB   |    <#IMAGE#>      ^HDISP                  |
@@ -363,7 +361,6 @@ ARCHITECTURE rtl OF ascal IS
 	SIGNAL i_iauto : std_logic;
 	SIGNAL i_mode : unsigned(4 DOWNTO 0);
 	SIGNAL i_format : unsigned(1 DOWNTO 0);
-	SIGNAL i_fxd : std_logic;
 	SIGNAL i_ven,i_sof : std_logic;
 	SIGNAL i_wr : std_logic;
 	SIGNAL i_divstart,i_divrun : std_logic;
@@ -450,7 +447,6 @@ ARCHITECTURE rtl OF ascal IS
 	SIGNAL o_run : std_logic;
 	SIGNAL o_freeze : std_logic;
 	SIGNAL o_bob_deint : std_logic;
-	SIGNAL o_fxfield_reg : std_logic;
 	SIGNAL o_iwfl : std_logic_vector(2 DOWNTO 0);
 	SIGNAL o_mode,o_hmode,o_vmode : unsigned(4 DOWNTO 0);
 	SIGNAL o_format : unsigned(5 DOWNTO 0);
@@ -1218,8 +1214,8 @@ BEGIN
 				i_fl_pre<=i_pfl;
 
 				----------------------------------------------------
-				-- FXD treats fields as progressive frames.
-				IF NOT INTER OR i_fxd='1' THEN
+				-- Detect interlaced video
+				IF NOT INTER THEN
 					i_intercnt<=0;
 				ELSIF i_pfl/=i_fl_pre THEN
 					i_intercnt<=3;
@@ -1240,12 +1236,7 @@ BEGIN
 				IF i_pde='1' AND i_sof='1' THEN
 					i_sof<='0';
 					i_vcpt<=0;
-					IF i_fxd='1' THEN
-						i_line<='0';
-						i_wfl(o_ibuf0) <= i_pfl;
-						i_adrsi<=to_unsigned(N_BURST * to_integer(
-									 unsigned'("00") & to_std_logic(HEADER)),32);
-					ELSIF i_inter='1' AND i_flm='0' AND i_half='0' AND INTER THEN
+					IF i_inter='1' AND i_flm='0' AND i_half='0' AND INTER THEN
 						i_line<='1';
 						i_wfl(o_ibuf1) <= '0';
 						i_adrsi<=to_unsigned(N_BURST * i_hburst,32) +
@@ -1313,7 +1304,6 @@ BEGIN
 				----------------------------------------------------
 				i_mode<=mode; -- <ASYNC>
 				i_format<=format; -- <ASYNC>
-				i_fxd<=fx_direct; -- <ASYNC>
 
 				-- Downscaling : Nearest or bilinear
 				i_bil<=to_std_logic(i_mode(2 DOWNTO 0)/="000" AND NOT DOWNSCALE_NN);
@@ -1887,7 +1877,12 @@ BEGIN
 			o_readlev<=0;
 			o_copylev<=0;
 			o_hsp<='0';
-			o_fxfield_reg<='0';
+			o_readack_sync<='0';
+			o_readack_sync2<='0';
+			o_readack<='0';
+			o_readdataack_sync<='0';
+			o_readdataack_sync2<='0';
+			o_readdataack<='0';
 
 		ELSIF rising_edge(o_clk) THEN
 			------------------------------------------------------
@@ -1939,11 +1934,6 @@ BEGIN
 				o_ibuf1<=buf_next(o_ibuf1,o_obuf1,o_freeze);
 				o_bufup1<='1';
 				o_isync <= '1';
-			END IF;
-
-			-- Hold field identity for the whole output frame.
-			IF o_vsv(1)='1' AND o_vsv(0)='0' THEN
-				o_fxfield_reg<=o_iwfl(o_obuf0);
 			END IF;
 
 			-- Output : Change framebuffer, and image properties, at VS falling edge
@@ -2379,6 +2369,16 @@ BEGIN
 				o_lastv(2)<=last_v;
 				o_bibv (2)<=bib_v;
 				o_off  (2)<=off_v;
+			END IF;
+
+			-- Sometimes o_clk is paused during PLL reconfig and causes o_state to get stuck in sREAD state.
+			-- Reset state at VSync.
+			IF o_vsv(1)='1' AND o_vsv(0)='0' THEN
+				o_copy<=sWAIT;
+				o_state<=sDISP;
+				o_readlev<=0;
+				o_copylev<=0;
+				o_hsp<='0';
 			END IF;
 
 			------------------------------------------------------
@@ -3044,7 +3044,6 @@ BEGIN
 						 6 => i_clk,
 						 7 => o_clk,
 						 OTHERS =>'0');
-	o_fx_field <= o_fxfield_reg;
 
 	----------------------------------------------------------------------------
 END ARCHITECTURE rtl;

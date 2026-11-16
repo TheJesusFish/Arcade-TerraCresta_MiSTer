@@ -298,7 +298,6 @@ reg        cfg_set      = 0;
 
 wire       audio_96k    = cfg[6];
 wire       csync_en     = cfg[3];
-wire       fx_direct_mode = cfg[14];
 wire       io_osd_vga   = io_ss1 & ~io_ss2;
 `ifndef MISTER_DUAL_SDRAM
 	wire forced_scandoubler = cfg[4];
@@ -326,8 +325,6 @@ reg        coef_wr = 0;
 wire[12:0] ARX, ARY;
 reg [11:0] VSET = 0, HSET = 0;
 reg        FREESCALE = 0;
-reg        FX_DIRECT = 0;
-reg        FX_INTERLACE = 0;
 reg  [2:0] scaler_flt;
 reg        lowlat = 0;
 reg        cfg_done = 0;
@@ -398,12 +395,7 @@ always@(posedge clk_sys) begin
 				areset <= 1;
 				io_dout_sys <= 'b11;
 			end
-`ifndef MISTER_DEBUG_NOHDMI
-			// bit 4: HPS-owned FXD interlace protocol.
-			if(io_din[7:0] == 'h20) io_dout_sys <= 16'h0017;
-`else
-			if(io_din[7:0] == 'h20) io_dout_sys <= 'b011;
-`endif
+			if(io_din[7:0] == 'h20) io_dout_sys <= 'b11;
 `ifdef MISTER_DISABLE_ADAPTIVE
 			if(io_din[7:0] == 'h2B) io_dout_sys <= {fb_en, sl_r, 4'b0110};
 `else
@@ -478,7 +470,7 @@ always@(posedge clk_sys) begin
 				else coef_addr <= io_din[11:0];
 			end
 			if(cmd == 'h2B) scaler_flt <= io_din[2:0];
-			if(cmd == 'h37) {FREESCALE,FX_DIRECT,FX_INTERLACE,HSET} <= {io_din[15:13],io_din[11:0]};
+			if(cmd == 'h37) {FREESCALE,HSET} <= {io_din[15],io_din[11:0]};
 			if(cmd == 'h38) vs_line <= io_din[11:0];
 			if(cmd == 'h39) begin
 				case(cnt[3:0])
@@ -713,7 +705,6 @@ wire         vbuf_write;
 
 wire  [23:0] hdmi_data;
 wire         hdmi_vs, hdmi_hs, hdmi_de, hdmi_vbl, hdmi_brd;
-wire         ascal_fx_field;
 wire         freeze;
 wire         bob_deint;
 
@@ -781,7 +772,6 @@ wire         bob_deint;
 		.o_vbl    (hdmi_vbl),
 		.o_brd    (hdmi_brd),
 		.o_lltune (lltune),
-		.o_fx_field(ascal_fx_field),
 		.htotal   (WIDTH + HFP + HBP + HS[11:0]),
 		.hsstart  (WIDTH + HFP),
 		.hsend    (WIDTH + HFP + HS[11:0]),
@@ -798,8 +788,7 @@ wire         bob_deint;
 		.vrrmax   (HEIGHT + VBP + VS[11:0] + 12'd1),
 		.swblack  (hdmi_blackout),
 
-		.mode     ({~(lowlat | FX_INTERLACE),fx_direct_mode ? 1'b0 : (LFB_EN ? LFB_FLT : |scaler_flt),2'b00}),
-		.fx_direct(FX_DIRECT),
+		.mode     ({~lowlat,LFB_EN ? LFB_FLT : |scaler_flt,2'b00}),
 		.poly_clk (clk_sys),
 		.poly_a   (coef_addr),
 		.poly_dw  (coef_data),
@@ -839,8 +828,6 @@ wire         bob_deint;
 		.avl_read         (vbuf_read),
 		.avl_byteenable   (vbuf_byteenable)
 	);
-`else
-	assign ascal_fx_field = 1'b0;
 `endif
 
 reg        LFB_EN     = 0;
@@ -1320,9 +1307,6 @@ always @(posedge hdmi_tx_clk) begin
 
 	reg hs,vs,de;
 	reg [23:0] d;
-	reg fx_de = 0, fx_vs = 0, fx_interlace = 0;
-	reg fx_interlace_meta = 0, fx_interlace_sync = 0;
-	reg [12:0] fx_line = 0;
 	
 	hdmi_dv_data <= dv_data;
 	hdmi_dv_hs   <= dv_hs;
@@ -1344,18 +1328,7 @@ always @(posedge hdmi_tx_clk) begin
 	hdmi_out_hs <= hs;
 	hdmi_out_vs <= vs;
 	hdmi_out_de <= de;
-
-	fx_vs <= vs;
-	fx_de <= de;
-	fx_interlace_meta <= FX_INTERLACE && !direct_video;
-	fx_interlace_sync <= fx_interlace_meta;
-	if(vs != fx_vs) begin
-		fx_line <= 0;
-		fx_interlace <= fx_interlace_sync;
-	end
-	else if(!de && fx_de && !(&fx_line)) fx_line <= fx_line + 1'd1;
-
-	hdmi_out_d  <= (!direct_video && fx_interlace && de && (fx_line < 5)) ? {8'h00, {8{ascal_fx_field}}, 8'hFF} : d;
+	hdmi_out_d  <= d;
 end
 
 assign HDMI_TX_HS = hdmi_out_hs;
@@ -1411,7 +1384,7 @@ scanlines #(0) VGA_scanlines
 (
 	.clk(clk_vid),
 
-	.scanlines(fx_direct_mode ? 2'b00 : scanlines),
+	.scanlines(scanlines),
 	.din(de_emu ? {r_out, g_out, b_out} : 24'd0),
 	.hs_in(hs_fix),
 	.vs_in(vs_fix),
@@ -1588,9 +1561,6 @@ assign SDCD_SPDIF = (mcp_en & ~spdif) ? 1'b0 : 1'bZ;
 `ifndef MISTER_DUAL_SDRAM
 	wire analog_l, analog_r;
 
-	assign AUDIO_SPDIF = av_dis ? 1'bZ : (SW[0] | mcp_en) ? HDMI_LRCLK : spdif;
-	assign AUDIO_R     = av_dis ? 1'bZ : (SW[0] | mcp_en) ? HDMI_I2S   : analog_r;
-	assign AUDIO_L     = av_dis ? 1'bZ : (SW[0] | mcp_en) ? HDMI_SCLK  : analog_l;
 `endif
 
 assign HDMI_MCLK = clk_audio;
@@ -1642,6 +1612,18 @@ audio_out audio_out
 	.spdif(spdif)
 );
 
+`ifndef MISTER_DUAL_SDRAM
+	reg aud_spdif_q, aud_r_q, aud_l_q;
+	always @(posedge clk_audio) begin
+		aud_spdif_q <= (SW[0] | mcp_en) ? HDMI_LRCLK : spdif;
+		aud_r_q     <= (SW[0] | mcp_en) ? HDMI_I2S   : analog_r;
+		aud_l_q     <= (SW[0] | mcp_en) ? HDMI_SCLK  : analog_l;
+	end
+
+	assign AUDIO_SPDIF = av_dis ? 1'bZ : aud_spdif_q;
+	assign AUDIO_R     = av_dis ? 1'bZ : aud_r_q;
+	assign AUDIO_L     = av_dis ? 1'bZ : aud_l_q;
+`endif
 
 `ifndef MISTER_DISABLE_ALSA
 	wire aspi_sck,aspi_mosi,aspi_ss,aspi_miso;
@@ -1807,6 +1789,12 @@ emu emu
 	.HDMI_FREEZE(freeze),
 	.HDMI_BLACKOUT(hdmi_blackout),
 	.HDMI_BOB_DEINT(bob_deint),
+
+	.LFB_FMT(LFB_FMT),
+	.LFB_BASE(LFB_BASE),
+	.LFB_WIDTH(LFB_WIDTH),
+	.LFB_HEIGHT(LFB_HEIGHT),
+	.LFB_STRIDE(LFB_STRIDE),
 
 	.CLK_VIDEO(clk_vid),
 	.CE_PIXEL(ce_pix),
